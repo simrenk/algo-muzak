@@ -1,18 +1,7 @@
 const ctx = new (window.AudioContext || window.webkitAudioContext)()
-
-//analyser node
-const fft = new AnalyserNode(ctx, { fftSize: 2048 })
+const ana = new AnalyserNode(ctx, { anaSize: 2048 })
 const types = ['sine', 'square', 'sawtooth', 'triangle']
 
-//Source Node
-// const tone = new OscillatorNode(ctx, {
-//   type: 'sine',
-//   frequency: 440
-// })
-
-// const lvl = new GainNode(ctx, {
-//   gain: 0.25
-// })
 
 function tone (type, pitch, time, duration) {
   const t = time || ctx.currentTime
@@ -21,14 +10,16 @@ function tone (type, pitch, time, duration) {
     type: type || 'sine',
     frequency: pitch || 440
   })
-  const lvl = new GainNode(ctx, {gain: 0.001})
-  osc.connect(lvl)
-  lvl.connect(ctx.destination)
-  lvl.connect(fft)
+  const gain = new GainNode(ctx, {gain: 0.5})
+  const convolver = new ConvolverNode(ctx)
+  convolver.connect(gain)
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+  gain.connect(ana)
   osc.start(t)
   osc.stop(t + dur)
   adsr({
-    param: lvl.gain,
+    param: gain.gain,
     peak: 0.7,
     hold: 0.8,
     time: t,
@@ -61,9 +52,9 @@ function adsr (opts) {
 
   const initVal = param.value
   param.setValueAtTime(initVal, time)
-  param.linearRampToValueAtTime(peak, time+a)
+  param.exponentialRampToValueAtTime(peak, time+a)
   param.linearRampToValueAtTime(hold, time+a+d)
-  param.linearRampToValueAtTime(hold, time+a+d+s)
+  param.exponentialRampToValueAtTime(hold, time+a+d+s)
   param.linearRampToValueAtTime(initVal, time+a+d+s+r)
 }
 
@@ -76,36 +67,6 @@ function step(rootFreq, steps) {
 function r(scale) {
   return Math.floor(Math.random() * scale.length)
 }
-// lvl.gain.setValueAtTime(0.25, ctx.currentTime)
-// lvl.gain.linearRampToValueAtTime(1, ctx.currentTime + 1)
-// lvl.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 2)
-
-// const p = 0.8 // peak value for all tones
-// const v = 0.7 // sustained value for all tones
-
-// tone.frequency.setValueAtTime(440.00, ctx.currentTime)
-// adsr(lvl.gain, p,v, ctx.currentTime, 0.2,0.1,0.4,0.2) // 0.9s
-
-// tone.frequency.setValueAtTime(523.25, ctx.currentTime + 1)
-// adsr(lvl.gain, p,v, ctx.currentTime + 1, 0.2,0.1,0.4,0.2) // 0.9s
-
-// tone.frequency.setValueAtTime(659.26, ctx.currentTime + 2)
-// adsr(lvl.gain, p,v, ctx.currentTime + 2, 0.2,0.1,0.4,0.2) // 0.9s
-
-// tone.frequency.setValueAtTime(523.25, ctx.currentTime + 3)
-// adsr(lvl.gain, p,v, ctx.currentTime + 3, 0.2,0.1,0.7,0.2) // 1.2s
-
-// tone.frequency.setValueAtTime(440.00, ctx.currentTime + 4.5)
-// adsr(lvl.gain, p,v, ctx.currentTime + 4.5, 0.2,0.1,2.0,0.2) // 2.5s
-
-// // tone.connect(fft)
-// tone.connect(lvl)
-// lvl.connect(ctx.destination)
-// lvl.connect(fft)
-
-
-// tone.start(ctx.currentTime)
-// tone.stop(ctx.currentTime + 7)
 
 const major = [0, 2, 4, 5, 7, 9, 11, 12]
 const minor = [0, 2, 3, 5, 7, 8, 10, 12]
@@ -136,4 +97,4 @@ for (let b = 0; b < 4; b++) {
   }
 
 }
-createWaveCanvas({ element: 'section', analyser: fft })
+createWaveCanvas({ element: 'section', analyser: ana })
